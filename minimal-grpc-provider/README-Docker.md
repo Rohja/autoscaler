@@ -56,6 +56,34 @@ docker run --rm -p 8086:8086 \
 Example Kubernetes deployment:
 
 ```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: minimal-grpc-provider-config
+data:
+  config.yaml: |
+    nodeGroup:
+      id: "wol-nodegroup"
+      minSize: 0
+      maxSize: 5
+
+    nodes:
+      - hostname: "node1"
+        ip: "192.168.1.10"
+        mac: "00:11:22:33:44:55"
+        cpu: 4
+        memory: 8589934592  # 8GB in bytes
+      - hostname: "node2"
+        ip: "192.168.1.11"
+        mac: "00:11:22:33:44:56"
+        cpu: 4
+        memory: 8589934592  # 8GB in bytes
+      - hostname: "node3"
+        ip: "192.168.1.12"
+        mac: "00:11:22:33:44:57"
+        cpu: 8
+        memory: 17179869184  # 16GB in bytes
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -80,6 +108,7 @@ spec:
         - name: config
           mountPath: /app/config.yaml
           subPath: config.yaml
+          readOnly: true
         args:
         - --config
         - /app/config.yaml
