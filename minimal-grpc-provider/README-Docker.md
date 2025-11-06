@@ -96,7 +96,7 @@ spec:
       serviceAccountName: minimal-grpc-provider
       containers:
       - name: minimal-grpc-provider
-        image: minimal-grpc-provider:latest
+        image: ghcr.io/rohja/autoscaler:master
         ports:
         - containerPort: 8086
         volumeMounts:
