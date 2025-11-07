@@ -47,6 +47,7 @@ spec:
       containers:
       - name: minimal-grpc-provider
         image: ghcr.io/rohja/autoscaler:master
+        imagePullPolicy: Always
         ports:
         - containerPort: 8086
         volumeMounts:
