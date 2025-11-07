@@ -186,7 +186,7 @@ func (s *Server) NodeGroups(ctx context.Context, req *protos.NodeGroupsRequest) 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return &protos.NodeGroupsResponse{
+	resp := &protos.NodeGroupsResponse{
 		NodeGroups: []*protos.NodeGroup{
 			{
 				Id:      s.nodeGroupID,
@@ -195,7 +195,9 @@ func (s *Server) NodeGroups(ctx context.Context, req *protos.NodeGroupsRequest) 
 				Debug:   fmt.Sprintf("NodeGroup with %d configured nodes", len(s.config.Nodes)),
 			},
 		},
-	}, nil
+	}
+	klog.Infof("NodeGroups returning response: %+v, error: %v", resp, nil)
+	return resp, nil
 }
 
 // NodeGroupForNode returns the node group for a given node
@@ -203,7 +205,9 @@ func (s *Server) NodeGroupForNode(ctx context.Context, req *protos.NodeGroupForN
 	node := req.GetNode()
 	if node == nil {
 		klog.Infof("NodeGroupForNode called with request: node=nil")
-		return nil, status.Error(codes.InvalidArgument, "node is required")
+		err := status.Error(codes.InvalidArgument, "node is required")
+		klog.Infof("NodeGroupForNode returning response: nil, error: %v", err)
+		return nil, err
 	}
 	klog.Infof("NodeGroupForNode called with request: node=%+v (name=%s, providerID=%s)", node, node.GetName(), node.GetProviderID())
 	s.mu.RLock()
@@ -212,20 +216,24 @@ func (s *Server) NodeGroupForNode(ctx context.Context, req *protos.NodeGroupForN
 	// Check if the node matches any of our configured nodes
 	for _, cfgNode := range s.config.Nodes {
 		if node.GetName() == cfgNode.Hostname || node.GetProviderID() == fmt.Sprintf("wol://%s", cfgNode.Hostname) {
-			return &protos.NodeGroupForNodeResponse{
+			resp := &protos.NodeGroupForNodeResponse{
 				NodeGroup: &protos.NodeGroup{
 					Id:      s.nodeGroupID,
 					MinSize: s.config.NodeGroup.MinSize,
 					MaxSize: s.config.NodeGroup.MaxSize,
 				},
-			}, nil
+			}
+			klog.Infof("NodeGroupForNode returning response: %+v, error: %v", resp, nil)
+			return resp, nil
 		}
 	}
 
 	// Return empty node group if not found
-	return &protos.NodeGroupForNodeResponse{
+	resp := &protos.NodeGroupForNodeResponse{
 		NodeGroup: &protos.NodeGroup{},
-	}, nil
+	}
+	klog.Infof("NodeGroupForNode returning response: %+v, error: %v", resp, nil)
+	return resp, nil
 }
 
 // NodeGroupTargetSize returns the current target size
@@ -235,12 +243,16 @@ func (s *Server) NodeGroupTargetSize(ctx context.Context, req *protos.NodeGroupT
 	defer s.mu.RUnlock()
 
 	if req.GetId() != s.nodeGroupID {
-		return nil, status.Error(codes.NotFound, "node group not found")
+		err := status.Error(codes.NotFound, "node group not found")
+		klog.Infof("NodeGroupTargetSize returning response: nil, error: %v", err)
+		return nil, err
 	}
 
-	return &protos.NodeGroupTargetSizeResponse{
+	resp := &protos.NodeGroupTargetSizeResponse{
 		TargetSize: s.targetSize,
-	}, nil
+	}
+	klog.Infof("NodeGroupTargetSize returning response: %+v, error: %v", resp, nil)
+	return resp, nil
 }
 
 // NodeGroupIncreaseSize increases the size of the node group
@@ -250,17 +262,23 @@ func (s *Server) NodeGroupIncreaseSize(ctx context.Context, req *protos.NodeGrou
 	defer s.mu.Unlock()
 
 	if req.GetId() != s.nodeGroupID {
-		return nil, status.Error(codes.NotFound, "node group not found")
+		err := status.Error(codes.NotFound, "node group not found")
+		klog.Infof("NodeGroupIncreaseSize returning response: nil, error: %v", err)
+		return nil, err
 	}
 
 	delta := req.GetDelta()
 	if delta <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "delta must be positive")
+		err := status.Error(codes.InvalidArgument, "delta must be positive")
+		klog.Infof("NodeGroupIncreaseSize returning response: nil, error: %v", err)
+		return nil, err
 	}
 
 	newSize := s.targetSize + delta
 	if newSize > s.config.NodeGroup.MaxSize {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("target size %d exceeds max size %d", newSize, s.config.NodeGroup.MaxSize))
+		err := status.Error(codes.InvalidArgument, fmt.Sprintf("target size %d exceeds max size %d", newSize, s.config.NodeGroup.MaxSize))
+		klog.Infof("NodeGroupIncreaseSize returning response: nil, error: %v", err)
+		return nil, err
 	}
 
 	// Find nodes that are not running and wake them up
@@ -275,7 +293,9 @@ func (s *Server) NodeGroupIncreaseSize(ctx context.Context, req *protos.NodeGrou
 	}
 
 	if len(nodesToWake) < int(delta) {
-		return nil, status.Error(codes.ResourceExhausted, fmt.Sprintf("not enough nodes available to wake (need %d, found %d)", delta, len(nodesToWake)))
+		err := status.Error(codes.ResourceExhausted, fmt.Sprintf("not enough nodes available to wake (need %d, found %d)", delta, len(nodesToWake)))
+		klog.Infof("NodeGroupIncreaseSize returning response: nil, error: %v", err)
+		return nil, err
 	}
 
 	// Wake up the nodes
@@ -289,7 +309,9 @@ func (s *Server) NodeGroupIncreaseSize(ctx context.Context, req *protos.NodeGrou
 	}
 
 	s.targetSize = newSize
-	return &protos.NodeGroupIncreaseSizeResponse{}, nil
+	resp := &protos.NodeGroupIncreaseSizeResponse{}
+	klog.Infof("NodeGroupIncreaseSize returning response: %+v, error: %v", resp, nil)
+	return resp, nil
 }
 
 // NodeGroupDeleteNodes deletes nodes from the node group
@@ -304,11 +326,15 @@ func (s *Server) NodeGroupDeleteNodes(ctx context.Context, req *protos.NodeGroup
 	defer s.mu.Unlock()
 
 	if req.GetId() != s.nodeGroupID {
-		return nil, status.Error(codes.NotFound, "node group not found")
+		err := status.Error(codes.NotFound, "node group not found")
+		klog.Infof("NodeGroupDeleteNodes returning response: nil, error: %v", err)
+		return nil, err
 	}
 
 	if len(nodesToDelete) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "no nodes specified")
+		err := status.Error(codes.InvalidArgument, "no nodes specified")
+		klog.Infof("NodeGroupDeleteNodes returning response: nil, error: %v", err)
+		return nil, err
 	}
 
 	// Shutdown the nodes
@@ -327,7 +353,9 @@ func (s *Server) NodeGroupDeleteNodes(ctx context.Context, req *protos.NodeGroup
 		s.targetSize = s.config.NodeGroup.MinSize
 	}
 
-	return &protos.NodeGroupDeleteNodesResponse{}, nil
+	resp := &protos.NodeGroupDeleteNodesResponse{}
+	klog.Infof("NodeGroupDeleteNodes returning response: %+v, error: %v", resp, nil)
+	return resp, nil
 }
 
 // NodeGroupDecreaseTargetSize decreases the target size
@@ -337,21 +365,29 @@ func (s *Server) NodeGroupDecreaseTargetSize(ctx context.Context, req *protos.No
 	defer s.mu.Unlock()
 
 	if req.GetId() != s.nodeGroupID {
-		return nil, status.Error(codes.NotFound, "node group not found")
+		err := status.Error(codes.NotFound, "node group not found")
+		klog.Infof("NodeGroupDecreaseTargetSize returning response: nil, error: %v", err)
+		return nil, err
 	}
 
 	delta := req.GetDelta()
 	if delta >= 0 {
-		return nil, status.Error(codes.InvalidArgument, "delta must be negative")
+		err := status.Error(codes.InvalidArgument, "delta must be negative")
+		klog.Infof("NodeGroupDecreaseTargetSize returning response: nil, error: %v", err)
+		return nil, err
 	}
 
 	newSize := s.targetSize + delta // delta is negative
 	if newSize < s.config.NodeGroup.MinSize {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("target size %d is below min size %d", newSize, s.config.NodeGroup.MinSize))
+		err := status.Error(codes.InvalidArgument, fmt.Sprintf("target size %d is below min size %d", newSize, s.config.NodeGroup.MinSize))
+		klog.Infof("NodeGroupDecreaseTargetSize returning response: nil, error: %v", err)
+		return nil, err
 	}
 
 	s.targetSize = newSize
-	return &protos.NodeGroupDecreaseTargetSizeResponse{}, nil
+	resp := &protos.NodeGroupDecreaseTargetSizeResponse{}
+	klog.Infof("NodeGroupDecreaseTargetSize returning response: %+v, error: %v", resp, nil)
+	return resp, nil
 }
 
 // NodeGroupNodes returns a list of all nodes in the node group
@@ -361,7 +397,9 @@ func (s *Server) NodeGroupNodes(ctx context.Context, req *protos.NodeGroupNodesR
 	defer s.mu.RUnlock()
 
 	if req.GetId() != s.nodeGroupID {
-		return nil, status.Error(codes.NotFound, "node group not found")
+		err := status.Error(codes.NotFound, "node group not found")
+		klog.Infof("NodeGroupNodes returning response: nil, error: %v", err)
+		return nil, err
 	}
 
 	instances := make([]*protos.Instance, 0)
@@ -382,15 +420,19 @@ func (s *Server) NodeGroupNodes(ctx context.Context, req *protos.NodeGroupNodesR
 		})
 	}
 
-	return &protos.NodeGroupNodesResponse{
+	resp := &protos.NodeGroupNodesResponse{
 		Instances: instances,
-	}, nil
+	}
+	klog.Infof("NodeGroupNodes returning response: %+v (instances count=%d), error: %v", resp, len(instances), nil)
+	return resp, nil
 }
 
 // Cleanup cleans up resources
 func (s *Server) Cleanup(ctx context.Context, req *protos.CleanupRequest) (*protos.CleanupResponse, error) {
 	klog.Infof("Cleanup called with request: %+v", req)
-	return &protos.CleanupResponse{}, nil
+	resp := &protos.CleanupResponse{}
+	klog.Infof("Cleanup returning response: %+v, error: %v", resp, nil)
+	return resp, nil
 }
 
 // Refresh refreshes the cloud provider state
@@ -412,7 +454,9 @@ func (s *Server) Refresh(ctx context.Context, req *protos.RefreshRequest) (*prot
 		s.targetSize = runningCount
 	}
 
-	return &protos.RefreshResponse{}, nil
+	resp := &protos.RefreshResponse{}
+	klog.Infof("Refresh returning response: %+v, error: %v", resp, nil)
+	return resp, nil
 }
 
 // Optional methods - return Unimplemented
@@ -426,33 +470,45 @@ func (s *Server) PricingNodePrice(ctx context.Context, req *protos.PricingNodePr
 		klog.Infof("PricingNodePrice called with request: node=nil, startTime=%v, endTime=%v",
 			req.GetStartTimestamp(), req.GetEndTimestamp())
 	}
-	return nil, status.Error(codes.Unimplemented, "pricing not implemented")
+	err := status.Error(codes.Unimplemented, "pricing not implemented")
+	klog.Infof("PricingNodePrice returning response: nil, error: %v", err)
+	return nil, err
 }
 
 func (s *Server) PricingPodPrice(ctx context.Context, req *protos.PricingPodPriceRequest) (*protos.PricingPodPriceResponse, error) {
 	klog.Infof("PricingPodPrice called with request: podBytes length=%d, startTime=%v, endTime=%v",
 		len(req.GetPodBytes()), req.GetStartTimestamp(), req.GetEndTimestamp())
-	return nil, status.Error(codes.Unimplemented, "pricing not implemented")
+	err := status.Error(codes.Unimplemented, "pricing not implemented")
+	klog.Infof("PricingPodPrice returning response: nil, error: %v", err)
+	return nil, err
 }
 
 func (s *Server) GPULabel(ctx context.Context, req *protos.GPULabelRequest) (*protos.GPULabelResponse, error) {
 	klog.Infof("GPULabel called with request: %+v", req)
-	return &protos.GPULabelResponse{Label: ""}, nil
+	resp := &protos.GPULabelResponse{Label: ""}
+	klog.Infof("GPULabel returning response: %+v, error: %v", resp, nil)
+	return resp, nil
 }
 
 func (s *Server) GetAvailableGPUTypes(ctx context.Context, req *protos.GetAvailableGPUTypesRequest) (*protos.GetAvailableGPUTypesResponse, error) {
 	klog.Infof("GetAvailableGPUTypes called with request: %+v", req)
-	return &protos.GetAvailableGPUTypesResponse{GpuTypes: make(map[string]*anypb.Any)}, nil
+	resp := &protos.GetAvailableGPUTypesResponse{GpuTypes: make(map[string]*anypb.Any)}
+	klog.Infof("GetAvailableGPUTypes returning response: %+v, error: %v", resp, nil)
+	return resp, nil
 }
 
 func (s *Server) NodeGroupTemplateNodeInfo(ctx context.Context, req *protos.NodeGroupTemplateNodeInfoRequest) (*protos.NodeGroupTemplateNodeInfoResponse, error) {
 	klog.Infof("NodeGroupTemplateNodeInfo called with request: id=%s", req.GetId())
-	return nil, status.Error(codes.Unimplemented, "template node info not implemented")
+	err := status.Error(codes.Unimplemented, "template node info not implemented")
+	klog.Infof("NodeGroupTemplateNodeInfo returning response: nil, error: %v", err)
+	return nil, err
 }
 
 func (s *Server) NodeGroupGetOptions(ctx context.Context, req *protos.NodeGroupAutoscalingOptionsRequest) (*protos.NodeGroupAutoscalingOptionsResponse, error) {
 	klog.Infof("NodeGroupGetOptions called with request: id=%s, defaults=%+v", req.GetId(), req.GetDefaults())
-	return nil, status.Error(codes.Unimplemented, "node group options not implemented")
+	err := status.Error(codes.Unimplemented, "node group options not implemented")
+	klog.Infof("NodeGroupGetOptions returning response: nil, error: %v", err)
+	return nil, err
 }
 
 func main() {
