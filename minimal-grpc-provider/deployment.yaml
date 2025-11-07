@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: minimal-grpc-provider-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    nodeGroup:
+      id: "coredata-dellwyse-nodegroup"
+      minSize: 0
+      maxSize: 5
+
+    nodes:
+      - hostname: "talos-dy7-qkw"
+        ip: "192.168.0.223"
+        mac: "d8:9e:f3:e1:9c:51"
+        cpu: 4
+        memory: 8589934592  # 8GB in bytes
+      - hostname: "talos-e28-aua"
+        ip: "192.168.0.137"
+        mac: "84:7b:eb:f1:92:8b"
+        cpu: 4
+        memory: 8589934592  # 8GB in bytes
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: minimal-grpc-provider
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minimal-grpc-provider
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minimal-grpc-provider
+  template:
+    metadata:
+      labels:
+        app: minimal-grpc-provider
+    spec:
+      serviceAccountName: minimal-grpc-provider
+      containers:
+      - name: minimal-grpc-provider
+        image: ghcr.io/rohja/autoscaler:master
+        ports:
+        - containerPort: 8086
+        volumeMounts:
+        - name: config
+          mountPath: /app/config.yaml
+          subPath: config.yaml
+          readOnly: true
+        args:
+        - --config
+        - /app/config.yaml
+        - --address
+        - :8086
+      volumes:
+      - name: config
+        configMap:
+          name: minimal-grpc-provider-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minimal-grpc-provider
+  namespace: kube-system
+spec:
+  selector:
+    app: minimal-grpc-provider
+  ports:
+  - port: 8086
+    targetPort: 8086
+  type: ClusterIP
