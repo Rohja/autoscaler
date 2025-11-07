@@ -112,7 +112,10 @@ func isNodeRunning(client kubernetes.Interface, hostname string) bool {
 	}
 	for _, condition := range node.Status.Conditions {
 		if condition.Type == apiv1.NodeReady && condition.Status == apiv1.ConditionTrue {
+			klog.Infof("Node %s is running", hostname)
 			return true
+		} else {
+			klog.Infof("Node %s is not running", hostname)
 		}
 	}
 	return false
@@ -251,7 +254,7 @@ func (s *Server) NodeGroupTargetSize(ctx context.Context, req *protos.NodeGroupT
 	resp := &protos.NodeGroupTargetSizeResponse{
 		TargetSize: s.targetSize,
 	}
-	klog.Infof("NodeGroupTargetSize returning response: %+v, error: %v", resp, nil)
+	klog.Infof("NodeGroupTargetSize returning response: %d, error: %v", resp.TargetSize, nil)
 	return resp, nil
 }
 
