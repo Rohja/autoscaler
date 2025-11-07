@@ -106,19 +106,19 @@ func NewServer(configPath string) (*Server, error) {
 
 // isNodeRunning checks if a node is running in Kubernetes
 func isNodeRunning(client kubernetes.Interface, hostname string) bool {
+	klog.Infof("isNodeRunning called with hostname: %s", hostname)
 	node, err := client.CoreV1().Nodes().Get(context.Background(), hostname, metav1.GetOptions{})
 	if err != nil {
-		klog.Errorf("Failed to get node %s: %v", hostname, err)
+		klog.Errorf("isNodeRunning returning false for hostname: %s, error: %v", hostname, err)
 		return false
 	}
 	for _, condition := range node.Status.Conditions {
 		if condition.Type == apiv1.NodeReady && condition.Status == apiv1.ConditionTrue {
-			klog.Infof("Node %s is running", hostname)
+			klog.Infof("isNodeRunning returning true for hostname: %s", hostname)
 			return true
-		} else {
-			klog.Infof("Node %s is not running", hostname)
 		}
 	}
+	klog.Infof("isNodeRunning returning false for hostname: %s, no ready condition found", hostname)
 	return false
 }
 
