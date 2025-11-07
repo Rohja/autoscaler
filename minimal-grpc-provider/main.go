@@ -108,6 +108,7 @@ func NewServer(configPath string) (*Server, error) {
 func isNodeRunning(client kubernetes.Interface, hostname string) bool {
 	node, err := client.CoreV1().Nodes().Get(context.Background(), hostname, metav1.GetOptions{})
 	if err != nil {
+		klog.Errorf("Failed to get node %s: %v", hostname, err)
 		return false
 	}
 	for _, condition := range node.Status.Conditions {
