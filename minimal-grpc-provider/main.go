@@ -95,13 +95,14 @@ func NewServer(configPath string) (*Server, error) {
 			targetSize++
 		}
 	}
-
-	return &Server{
+	server := &Server{
 		config:      &config,
 		k8sClient:   k8sClient,
 		nodeGroupID: config.NodeGroup.ID,
 		targetSize:  targetSize,
-	}, nil
+	}
+	klog.Infof("Server created with target size: %d, node group ID: %s", targetSize, config.NodeGroup.ID)
+	return server, nil
 }
 
 // isNodeRunning checks if a node is running in Kubernetes
