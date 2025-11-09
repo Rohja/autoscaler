@@ -220,7 +220,7 @@ func (s *Server) NodeGroupForNode(ctx context.Context, req *protos.NodeGroupForN
 
 	// Check if the node matches any of our configured nodes
 	for _, cfgNode := range s.config.Nodes {
-		if node.GetName() == cfgNode.Hostname || node.GetProviderID() == fmt.Sprintf("wol://%s", cfgNode.Hostname) {
+		if (node.GetName() == cfgNode.Hostname || node.GetProviderID() == fmt.Sprintf("wol://%s", cfgNode.Hostname)) && isNodeRunning(s.k8sClient, cfgNode.Hostname) {
 			resp := &protos.NodeGroupForNodeResponse{
 				NodeGroup: &protos.NodeGroup{
 					Id:      s.nodeGroupID,
