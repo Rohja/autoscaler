@@ -31,7 +31,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 FROM alpine:latest
 
 # Install runtime dependencies (ca-certificates for TLS, and shell for shutdown command)
-RUN apk --no-cache add ca-certificates tzdata
+RUN apk --no-cache add ca-certificates tzdata curl openssl
+
+# Install talosctl
+RUN curl -sL https://talos.dev/install | sh
 
 # Create non-root user
 RUN addgroup -g 1000 appuser && \
