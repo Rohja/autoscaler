@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -182,13 +183,7 @@ func parseMAC(s string) ([]byte, error) {
 // shutdownNode runs the shutdown command for a node
 func shutdownNode(hostname string) error {
 	klog.Infof("shutdownNode called with hostname: %s", hostname)
-	// If hostname starts with "wol://" remove the prefix
-	if after, ok := strings.CutPrefix(hostname, "wol://"); ok {
-		klog.Infof("shutdownNode hostname after removing prefix: %s", after)
-		hostname = after
-	} else {
-		klog.Infof("shutdownNode hostname did not start with 'wol://', using original hostname: %s", hostname)
-	}
+
 	cmd := exec.Command("talosctl", "shutdown", "--talosconfig=./talosconfig/talosconfig", "--nodes", hostname)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -197,6 +192,40 @@ func shutdownNode(hostname string) error {
 	}
 	klog.Infof("shutdownNode succeeded with hostname: %s, output: %s", hostname, string(output))
 	return nil
+}
+
+// waitForNodeOfflineAndDelete waits for a node to be offline and then deletes it from Kubernetes
+func waitForNodeOfflineAndDelete(client kubernetes.Interface, hostname string) {
+	klog.Infof("waitForNodeOfflineAndDelete started for hostname: %s", hostname)
+
+	// Poll until the node is offline
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	timeout := time.After(5 * time.Minute) // Maximum wait time of 5 minutes
+
+	for {
+		select {
+		case <-timeout:
+			klog.Errorf("waitForNodeOfflineAndDelete timeout waiting for node %s to go offline", hostname)
+			return
+		case <-ticker.C:
+			if !isNodeRunning(client, hostname) {
+				klog.Infof("Node %s is now offline, proceeding to delete from Kubernetes", hostname)
+
+				// Delete the node from Kubernetes
+				err := client.CoreV1().Nodes().Delete(context.Background(), hostname, metav1.DeleteOptions{})
+				if err != nil {
+					klog.Errorf("Failed to delete node %s from Kubernetes: %v", hostname, err)
+					return
+				}
+
+				klog.Infof("Successfully deleted node %s from Kubernetes", hostname)
+				return
+			}
+			klog.Infof("Node %s is still running, waiting...", hostname)
+		}
+	}
 }
 
 // NodeGroups returns all node groups
@@ -359,11 +388,19 @@ func (s *Server) NodeGroupDeleteNodes(ctx context.Context, req *protos.NodeGroup
 	// Shutdown the nodes
 	for _, pbNode := range nodesToDelete {
 		hostname := pbNode.GetName()
-		if err := shutdownNode(hostname); err != nil {
+		// Clean hostname (remove wol:// prefix if present)
+		cleanHostname := hostname
+		if after, ok := strings.CutPrefix(hostname, "wol://"); ok {
+			cleanHostname = after
+		}
+
+		if err := shutdownNode(cleanHostname); err != nil {
 			klog.Errorf("Failed to shutdown node %s: %v", hostname, err)
 			// Continue with other nodes
 		} else {
 			klog.Infof("Shutdown command executed for node %s", hostname)
+			// Start goroutine to wait for node to be offline and then delete it
+			go waitForNodeOfflineAndDelete(s.k8sClient, cleanHostname)
 		}
 	}
 
