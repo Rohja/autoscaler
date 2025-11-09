@@ -66,6 +66,14 @@ spec:
         app: minimal-grpc-provider
     spec:
       serviceAccountName: minimal-grpc-provider
+      priorityClassName: system-cluster-critical
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node.cloudprovider.kubernetes.io/uninitialized
+          operator: Exists
+          effect: NoSchedule
       containers:
       - name: minimal-grpc-provider
         image: ghcr.io/rohja/autoscaler:master
@@ -85,6 +93,13 @@ spec:
         - /app/config.yaml
         - --address
         - :8086
+        resources:
+          limits:
+            cpu: 200m
+            memory: 170Mi
+          requests:
+            cpu: 100m
+            memory: 70Mi
       volumes:
       - name: config
         configMap:
