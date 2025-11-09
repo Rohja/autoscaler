@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ethtool-wol-config
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: ethtool-wol-config
+  template:
+    metadata:
+      labels:
+        name: ethtool-wol-config
+    spec:
+      hostNetwork: true
+      hostPID: true
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/dell_wyse
+                operator: Exists
+      initContainers:
+      - name: ethtool-setup
+        image: alpine:latest
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - NET_ADMIN
+            - SYS_ADMIN
+        command:
+        - /bin/sh
+        - -c
+        - |
+          apk update && \
+          apk add ethtool && \
+          ethtool -s enp4s0 wol g && \
+          echo "Wake-on-LAN configured for enp4s0"
+      containers:
+      - name: pause
+        image: k8s.gcr.io/pause:3.9
+        resources:
+          requests:
+            cpu: 10m
+            memory: 10Mi
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+      - operator: Exists
+        effect: NoExecute
+

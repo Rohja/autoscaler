@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: max-resources-test
+  labels:
+    app: max-resources-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: max-resources-test
+  template:
+    metadata:
+      labels:
+        app: max-resources-test
+    spec:
+      containers:
+      - name: wait-forever
+        image: busybox:latest
+        command: ["/bin/sh", "-c", "sleep infinity"]
+        resources:
+          requests:
+            cpu: "3950m"
+            memory: "6513548Ki"
+          limits:
+            cpu: "3950m"
+            memory: "6513548Ki"
+
