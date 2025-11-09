@@ -181,8 +181,15 @@ func parseMAC(s string) ([]byte, error) {
 
 // shutdownNode runs the shutdown command for a node
 func shutdownNode(hostname string) error {
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("echo \"Shutting down %s\"", hostname))
-	return cmd.Run()
+	klog.Infof("shutdownNode called with hostname: %s", hostname)
+	cmd := exec.Command("talosctl", "shutdown", "--talosconfig=./talosconfig/talosconfig", hostname)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		klog.Errorf("shutdownNode failed with hostname: %s, error: %v, output: %s", hostname, err, string(output))
+		return fmt.Errorf("failed to shutdown node: %w", err)
+	}
+	klog.Infof("shutdownNode succeeded with hostname: %s, output: %s", hostname, string(output))
+	return nil
 }
 
 // NodeGroups returns all node groups
