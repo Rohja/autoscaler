@@ -189,7 +189,7 @@ func shutdownNode(hostname string) error {
 	} else {
 		klog.Infof("shutdownNode hostname did not start with 'wol://', using original hostname: %s", hostname)
 	}
-	cmd := exec.Command("talosctl", "shutdown", "--talosconfig=./talosconfig/talosconfig", hostname)
+	cmd := exec.Command("talosctl", "shutdown", "--talosconfig=./talosconfig/talosconfig", "--nodes", hostname)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		klog.Errorf("shutdownNode failed with hostname: %s, error: %v, output: %s", hostname, err, string(output))
