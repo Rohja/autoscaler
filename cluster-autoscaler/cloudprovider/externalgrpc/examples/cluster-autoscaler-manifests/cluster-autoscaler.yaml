@@ -138,6 +138,14 @@ spec:
         prometheus.io/port: '8085'
     spec:
       serviceAccountName: cluster-autoscaler
+      priorityClassName: system-cluster-critical
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node.cloudprovider.kubernetes.io/uninitialized
+          operator: Exists
+          effect: NoSchedule
       containers:
         - image: registry.k8s.io/autoscaling/cluster-autoscaler:v1.34.1
           name: cluster-autoscaler
