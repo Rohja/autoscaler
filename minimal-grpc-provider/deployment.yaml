@@ -78,7 +78,7 @@ spec:
           subPath: config.yaml
           readOnly: true
         - name: talosconfig
-          mountPath: /root/.talosconfig
+          mountPath: /app/talosconfig
           readOnly: true
         args:
         - --config
