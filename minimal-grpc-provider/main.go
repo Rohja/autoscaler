@@ -182,6 +182,13 @@ func parseMAC(s string) ([]byte, error) {
 // shutdownNode runs the shutdown command for a node
 func shutdownNode(hostname string) error {
 	klog.Infof("shutdownNode called with hostname: %s", hostname)
+	// If hostname starts with "wol://" remove the prefix
+	if after, ok := strings.CutPrefix(hostname, "wol://"); ok {
+		klog.Infof("shutdownNode hostname after removing prefix: %s", after)
+		hostname = after
+	} else {
+		klog.Infof("shutdownNode hostname did not start with 'wol://', using original hostname: %s", hostname)
+	}
 	cmd := exec.Command("talosctl", "shutdown", "--talosconfig=./talosconfig/talosconfig", hostname)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
