@@ -77,6 +77,9 @@ spec:
           mountPath: /app/config.yaml
           subPath: config.yaml
           readOnly: true
+        - name: talosconfig
+          mountPath: /root/.talosconfig
+          readOnly: true
         args:
         - --config
         - /app/config.yaml
@@ -86,6 +89,12 @@ spec:
       - name: config
         configMap:
           name: minimal-grpc-provider-config
+      - name: talosconfig
+        secret:
+          secretName: talosconfig-secret
+          items:
+          - key: talosconfig
+            path: talosconfig
 ---
 apiVersion: v1
 kind: Service
