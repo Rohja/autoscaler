@@ -19,8 +19,13 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: node-role.kubernetes.io/dell_wyse
-                operator: Exists
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - k8s-1
+                - k8s-2
+                - k8s-3
+                - k8s-4
       initContainers:
       - name: ethtool-setup
         image: alpine:latest
