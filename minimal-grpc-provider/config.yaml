@@ -4,12 +4,12 @@ nodeGroup:
   maxSize: 5
 
 nodes:
-  - hostname: "talos-dy7-qkw"
+  - hostname: "k8s-1"
     ip: "192.168.0.223"
     mac: "d8:9e:f3:e1:9c:51"
     cpu: 4
     memory: 8589934592  # 8GB in bytes
-  - hostname: "talos-e28-aua"
+  - hostname: "k8s-2"
     ip: "192.168.0.137"
     mac: "84:7b:eb:f1:92:8b"
     cpu: 4
